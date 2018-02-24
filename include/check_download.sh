@@ -11,11 +11,13 @@ checkDownload() {
   mirrorLink=http://mirrors.linuxeye.com/oneinstack/src
   pushd ${oneinstack_dir}/src
 
+  # General system utils
+  echo "Download openSSL..."
+  src_url=https://www.openssl.org/source/openssl-${openssl_version}.tar.gz && Download_src
+  src_url=http://curl.haxx.se/ca/cacert.pem && Download_src
+
   # Web
   if [ "${Web_yn}" == 'y' ]; then
-    echo "Download openSSL..."
-    src_url=https://www.openssl.org/source/openssl-${openssl_version}.tar.gz && Download_src
-    src_url=http://curl.haxx.se/ca/cacert.pem && Download_src
     case "${Nginx_version}" in
       1)
         echo "Download nginx..."
@@ -548,6 +550,30 @@ checkDownload() {
           echo "[${CMSG}${FILE_NAME}${CEND}] found."
         fi
         ;;
+      13) 
+        # MongoDB
+        echo "Download MongoDB binary package..."
+        FILE_NAME=mongodb-linux-${SYS_BIT_b}-${mongodb_version}.tgz
+        if [ "${IPADDR_COUNTRY}"x == "CN"x ]; then
+          DOWN_ADDR_MongoDB=${mirrorLink}
+        else
+          DOWN_ADDR_MongoDB=https://fastdl.mongodb.org/linux
+        fi
+        MongoDB_TAR_MD5=$(curl -s ${DOWN_ADDR_MongoDB}/${FILE_NAME}.md5 | grep ${FILE_NAME} | awk '{print $1}')
+
+        tryDlCount=0
+        while [ "$(md5sum ${FILE_NAME} | awk '{print $1}')" != "${MongoDB_TAR_MD5}" ]; do
+          wget -c --no-check-certificate ${DOWN_ADDR_MongoDB}/${FILE_NAME};sleep 1
+          let "tryDlCount++"
+          [ "$(md5sum ${FILE_NAME} | awk '{print $1}')" == "${MongoDB_TAR_MD5}" -o "${tryDlCount}" == '6' ] && break || continue
+        done
+        if [ "${tryDlCount}" == '6' ]; then
+          echo "${CFAILURE}${FILE_NAME} download failed, Please contact the author! ${CEND}"
+          kill -9 $$
+        else
+          echo "[${CMSG}${FILE_NAME}${CEND}] found."
+        fi
+        ;;
     esac
   fi
   # PHP
@@ -595,7 +621,7 @@ checkDownload() {
   # PHP OPCache
   case "${PHP_cache}" in
     1)
-      if [[ "$PHP_version" =~ ^[1,2]$ ]]; then
+      if [[ "$PHP_version" =~ ^[1-2]$ ]]; then
         # php 5.3 5.4
         echo "Download Zend OPCache..."
         src_url=https://pecl.php.net/get/zendopcache-${zendopcache_version}.tgz && Download_src
@@ -612,9 +638,9 @@ checkDownload() {
       # php 5.3 5.4 5.5 5.6 7.0 7.1 7.2
       echo "Download apcu..."
       if [[ "$PHP_version" =~ ^[1-4]$ ]]; then
-        src_url=http://pecl.php.net/get/apcu-${apcu_version}.tgz && Download_src
+        src_url=https://pecl.php.net/get/apcu-${apcu_version}.tgz && Download_src
       else
-        src_url=http://pecl.php.net/get/apcu-${apcu_for_php7_version}.tgz && Download_src
+        src_url=https://pecl.php.net/get/apcu-${apcu_for_php7_version}.tgz && Download_src
       fi
       ;;
     4)
@@ -679,6 +705,16 @@ checkDownload() {
     esac
   fi
 
+  if [ "${DB_version}" == '13' ]; then
+    if [[ "$PHP_version" =~ ^[1-2]$ ]]; then
+      echo "Download pecl mongo for php..."
+      src_url=https://pecl.php.net/get/mongo-${mongo_pecl_version}.tgz && Download_src
+    else
+      echo "Download pecl mongodb for php..."
+      src_url=https://pecl.php.net/get/mongodb-${mongodb_pecl_version}.tgz && Download_src
+    fi
+  fi
+
   if [ "${ionCube_yn}" == 'y' ]; then
     echo "Download ioncube..."
     if [ "${OS_BIT}" == '64' ]; then
@@ -697,7 +733,7 @@ checkDownload() {
       echo "Download ImageMagick..."
       src_url=${mirrorLink}/ImageMagick-${ImageMagick_version}.tar.gz && Download_src
       echo "Download imagick..."
-      src_url=http://pecl.php.net/get/imagick-${imagick_version}.tgz && Download_src
+      src_url=https://pecl.php.net/get/imagick-${imagick_version}.tgz && Download_src
     else
       echo "Download graphicsmagick..."
       src_url=http://downloads.sourceforge.net/project/graphicsmagick/graphicsmagick/${GraphicsMagick_version}/GraphicsMagick-${GraphicsMagick_version}.tar.gz && Download_src
@@ -706,7 +742,7 @@ checkDownload() {
         src_url=https://pecl.php.net/get/gmagick-${gmagick_for_php7_version}.tgz && Download_src
       else
         echo "Download gmagick for php..."
-        src_url=http://pecl.php.net/get/gmagick-${gmagick_version}.tgz && Download_src
+        src_url=https://pecl.php.net/get/gmagick-${gmagick_version}.tgz && Download_src
       fi
     fi
   fi
@@ -725,7 +761,7 @@ checkDownload() {
     echo "Download redis..."
     src_url=http://download.redis.io/releases/redis-${redis_version}.tar.gz && Download_src
     echo "Download redis pecl..."
-    src_url=http://pecl.php.net/get/redis-${redis_pecl_version}.tgz && Download_src
+    src_url=https://pecl.php.net/get/redis-${redis_pecl_version}.tgz && Download_src
     if [ "${OS}" == "CentOS" ]; then
       echo "Download start-stop-daemon.c for CentOS..."
       src_url=${mirrorLink}/start-stop-daemon.c && Download_src
@@ -743,9 +779,9 @@ checkDownload() {
       src_url=https://pecl.php.net/get/memcached-${memcached_pecl_php7_version}.tgz && Download_src
     else
       echo "Download pecl memcache for php..."
-      src_url=http://pecl.php.net/get/memcache-${memcache_pecl_version}.tgz && Download_src
+      src_url=https://pecl.php.net/get/memcache-${memcache_pecl_version}.tgz && Download_src
       echo "Download pecl memcached for php..."
-      src_url=http://pecl.php.net/get/memcached-${memcached_pecl_version}.tgz && Download_src
+      src_url=https://pecl.php.net/get/memcached-${memcached_pecl_version}.tgz && Download_src
     fi
 
     echo "Download libmemcached..."
