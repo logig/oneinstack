@@ -17,12 +17,12 @@ Install_MySQL57() {
   mkdir -p ${mysql_data_dir};chown mysql.mysql -R ${mysql_data_dir}
 
   if [ "${dbinstallmethod}" == "1" ]; then
-    tar xvf mysql-${mysql57_ver}-linux-glibc2.12-${SYS_BIT_b}.tar.gz
+    tar xzf mysql-${mysql57_ver}-linux-glibc2.12-${SYS_BIT_b}.tar.gz
     mv mysql-${mysql57_ver}-linux-glibc2.12-${SYS_BIT_b}/* ${mysql_install_dir}
     sed -i 's@executing mysqld_safe@executing mysqld_safe\nexport LD_PRELOAD=/usr/local/lib/libjemalloc.so@' ${mysql_install_dir}/bin/mysqld_safe
     sed -i "s@/usr/local/mysql@${mysql_install_dir}@g" ${mysql_install_dir}/bin/mysqld_safe
   elif [ "${dbinstallmethod}" == "2" ]; then
-    tar xvf mysql-${mysql57_ver}.tar.gz
+    tar xzf mysql-${mysql57_ver}.tar.gz
     pushd mysql-${mysql57_ver}
     cmake . -DCMAKE_INSTALL_PREFIX=${mysql_install_dir} \
     -DMYSQL_DATADIR=${mysql_data_dir} \
@@ -45,6 +45,7 @@ Install_MySQL57() {
   fi
 
   if [ -d "${mysql_install_dir}/support-files" ]; then
+    sed -i "s+^dbrootpwd.*+dbrootpwd='${dbrootpwd}'+" ../options.conf
     echo "${CSUCCESS}MySQL installed successfully! ${CEND}"
     if [ "${dbinstallmethod}" == "1" ]; then
       rm -rf mysql-${mysql57_ver}-*-${SYS_BIT_b}
@@ -53,7 +54,6 @@ Install_MySQL57() {
     fi
   else
     rm -rf ${mysql_install_dir}
-    rm -rf mysql-${mysql57_ver}
     echo "${CFAILURE}MySQL install failed, Please contact the author! ${CEND}"
     kill -9 $$
   fi
@@ -210,7 +210,7 @@ EOF
   ${mysql_install_dir}/bin/mysql -e "grant all privileges on *.* to root@'localhost' identified by \"${dbrootpwd}\" with grant option;"
   ${mysql_install_dir}/bin/mysql -uroot -p${dbrootpwd} -e "reset master;"
   rm -rf /etc/ld.so.conf.d/{mysql,mariadb,percona,alisql}*.conf
-  [ -e "${mysql_install_dir}/my.cnf" ] && rm -rf ${mysql_install_dir}/my.cnf
+  [ -e "${mysql_install_dir}/my.cnf" ] && rm -f ${mysql_install_dir}/my.cnf
   echo "${mysql_install_dir}/lib" > /etc/ld.so.conf.d/mysql.conf
   ldconfig
   service mysqld stop

@@ -22,7 +22,7 @@ Install_MariaDB102() {
     sed -i 's@executing mysqld_safe@executing mysqld_safe\nexport LD_PRELOAD=/usr/local/lib/libjemalloc.so@' ${mariadb_install_dir}/bin/mysqld_safe
     sed -i "s@/usr/local/mysql@${mariadb_install_dir}@g" ${mariadb_install_dir}/bin/mysqld_safe
   elif [ "${dbinstallmethod}" == "2" ]; then
-    tar xvf mariadb-${mariadb102_ver}.tar.gz
+    tar xzf mariadb-${mariadb102_ver}.tar.gz
     pushd mariadb-${mariadb102_ver}
     cmake . -DCMAKE_INSTALL_PREFIX=${mariadb_install_dir} \
     -DMYSQL_DATADIR=${mariadb_data_dir} \
@@ -45,6 +45,7 @@ Install_MariaDB102() {
   fi
 
   if [ -d "${mariadb_install_dir}/support-files" ]; then
+    sed -i "s+^dbrootpwd.*+dbrootpwd='${dbrootpwd}'+" ../options.conf
     echo "${CSUCCESS}MariaDB installed successfully! ${CEND}"
     if [ "${dbinstallmethod}" == "1" ]; then
       rm -rf mariadb-${mariadb102_ver}-*-${SYS_BIT_b}
@@ -53,7 +54,6 @@ Install_MariaDB102() {
     fi
   else
     rm -rf ${mariadb_install_dir}
-    rm -rf mariadb-${mariadb102_ver}
     echo "${CFAILURE}MariaDB install failed, Please contact the author! ${CEND}"
     kill -9 $$
   fi

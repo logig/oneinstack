@@ -8,7 +8,7 @@
 #       https://oneinstack.com
 #       https://github.com/lj2007331/oneinstack
 
-export PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
 clear
 printf "
 #######################################################################
@@ -62,8 +62,8 @@ fi
 
 # Check PHP Extensions
 Check_PHP_Extension() {
-  [ ! -e "${php_install_dir}/bin/phpize" ] && { echo "${CWARNING}PHP was not exist! ${CEND}"; exit 1; } 
-  [ -e "${php_install_dir}/etc/php.d/ext-${PHP_extension}.ini" ] && { echo "${CWARNING}PHP ${PHP_extension} module already installed! ${CEND}"; exit 1; }
+  [ ! -e "${php_install_dir}/bin/phpize" ] && { echo "${CWARNING}PHP was not exist! ${CEND}"; exit 1; }
+  [ -e "`ls ${php_install_dir}/etc/php.d/0?-${PHP_extension}.ini 2> /dev/null`" ] && { echo "${CWARNING}PHP ${PHP_extension} module already installed! ${CEND}"; exit 1; }
 }
 
 # restart PHP
@@ -78,26 +78,7 @@ Check_succ() {
 
 # Uninstall succ
 Uninstall_succ() {
-  [ -e "${php_install_dir}/etc/php.d/ext-${PHP_extension}.ini" ] && { rm -rf ${php_install_dir}/etc/php.d/ext-${PHP_extension}.ini; Restart_PHP; echo; echo "${CMSG}PHP ${PHP_extension} module uninstall completed${CEND}"; } || { echo; echo "${CWARNING}${PHP_extension} module does not exist! ${CEND}"; }
-}
-
-Install_letsencrypt() {
-  [ ! -e "${python_install_dir}/bin/python" ] && Install_Python
-  ${python_install_dir}/bin/pip install requests 
-  ${python_install_dir}/bin/pip install certbot
-  if [ -e "${python_install_dir}/bin/certbot" ]; then
-    echo; echo "${CSUCCESS}Let's Encrypt client installed successfully! ${CEND}"
-  else
-    echo; echo "${CFAILURE}Let's Encrypt client install failed, Please try again! ${CEND}"
-  fi
-}
-
-Uninstall_letsencrypt() {
-  ${python_install_dir}/bin/pip uninstall -y certbot > /dev/null 2>&1
-  rm -rf /etc/letsencrypt /var/log/letsencrypt /var/lib/letsencrypt ${python_install_dir}
-  [ "${OS}" == "CentOS" ] && Cron_file=/var/spool/cron/root || Cron_file=/var/spool/cron/crontabs/root
-  [ -e "$Cron_file" ] && sed -i '/certbot/d' ${Cron_file}
-  echo; echo "${CMSG}Let's Encrypt client uninstall completed${CEND}";
+  [ -e "`ls ${php_install_dir}/etc/php.d/0?-${PHP_extension}.ini 2> /dev/null`" ] && { rm -rf ${php_install_dir}/etc/php.d/0?-${PHP_extension}.ini; Restart_PHP; echo; echo "${CMSG}PHP ${PHP_extension} module uninstall completed${CEND}"; } || { echo; echo "${CWARNING}${PHP_extension} module does not exist! ${CEND}"; }
 }
 
 Install_fail2ban() {
@@ -109,7 +90,7 @@ Install_fail2ban() {
   ${python_install_dir}/bin/python setup.py install
   if [ "${OS}" == "CentOS" ]; then
     LOGPATH=/var/log/secure
-    /bin/cp files/redhat-initd /etc/init.d/fail2ban 
+    /bin/cp files/redhat-initd /etc/init.d/fail2ban
     sed -i "s@^FAIL2BAN=.*@FAIL2BAN=${python_install_dir}/bin/fail2ban-client@" /etc/init.d/fail2ban
     sed -i 's@Starting fail2ban.*@&\n    [ ! -e "/var/run/fail2ban" ] \&\& mkdir /var/run/fail2ban@' /etc/init.d/fail2ban
     chmod +x /etc/init.d/fail2ban
@@ -118,13 +99,13 @@ Install_fail2ban() {
   fi
   if [[ "${OS}" =~ ^Ubuntu$|^Debian$ ]]; then
     LOGPATH=/var/log/auth.log
-    /bin/cp files/debian-initd /etc/init.d/fail2ban 
+    /bin/cp files/debian-initd /etc/init.d/fail2ban
     sed -i 's@2 3 4 5@3 4 5@' /etc/init.d/fail2ban
     sed -i "s@^DAEMON=.*@DAEMON=${python_install_dir}/bin/\$NAME-client@" /etc/init.d/fail2ban
     chmod +x /etc/init.d/fail2ban
     update-rc.d fail2ban defaults
   fi
-  [ -z "`grep ^Port /etc/ssh/sshd_config`" ] && now_ssh_port=22 || now_ssh_port=`grep ^Port /etc/ssh/sshd_config | awk '{print $2}'`
+  [ -z "`grep ^Port /etc/ssh/sshd_config`" ] && now_ssh_port=22 || now_ssh_port=`grep ^Port /etc/ssh/sshd_config | awk '{print $2}' | head -1`
   cat > /etc/fail2ban/jail.local << EOF
 [DEFAULT]
 ignoreip = 127.0.0.1/8
@@ -135,9 +116,9 @@ maxretry = 5
 enabled = true
 filter  = sshd
 action  = iptables[name=SSH, port=$now_ssh_port, protocol=tcp]
-logpath = $LOGPATH 
+logpath = $LOGPATH
 EOF
-  cat > /etc/logrotate.d/fail2ban << EOF 
+  cat > /etc/logrotate.d/fail2ban << EOF
 /var/log/fail2ban.log {
     missingok
     notifempty
@@ -161,7 +142,7 @@ EOF
 Uninstall_fail2ban() {
   /etc/init.d/fail2ban stop
   ${python_install_dir}/bin/pip uninstall -y fail2ban > /dev/null 2>&1
-  rm -rf /etc/init.d/fail2ban /etc/fail2ban /etc/logrotate.d/fail2ban /var/log/fail2ban.* /var/run/fail2ban 
+  rm -rf /etc/init.d/fail2ban /etc/fail2ban /etc/logrotate.d/fail2ban /var/log/fail2ban.* /var/run/fail2ban
   echo; echo "${CMSG}fail2ban uninstall completed${CEND}";
 }
 
@@ -190,16 +171,15 @@ What Are You Doing?
 \t${CMSG} 4${CEND}. Install/Uninstall fileinfo PHP Extension
 \t${CMSG} 5${CEND}. Install/Uninstall memcached/memcache
 \t${CMSG} 6${CEND}. Install/Uninstall Redis
-\t${CMSG} 7${CEND}. Install/Uninstall Let's Encrypt client
-\t${CMSG} 8${CEND}. Install/Uninstall swoole PHP Extension 
-\t${CMSG} 9${CEND}. Install/Uninstall xdebug PHP Extension 
-\t${CMSG}10${CEND}. Install/Uninstall PHP Composer 
-\t${CMSG}11${CEND}. Install/Uninstall fail2ban
+\t${CMSG} 7${CEND}. Install/Uninstall swoole PHP Extension
+\t${CMSG} 8${CEND}. Install/Uninstall xdebug PHP Extension
+\t${CMSG} 9${CEND}. Install/Uninstall PHP Composer
+\t${CMSG}10${CEND}. Install/Uninstall fail2ban
 \t${CMSG} q${CEND}. Exit
 "
   read -p "Please input the correct option: " Number
-  if [[ ! "${Number}" =~ ^[1-9,q]$|^1[0-1]$ ]]; then
-    echo "${CFAILURE}input error! Please only input 1~11 and q${CEND}"
+  if [[ ! "${Number}" =~ ^[1-9,q]$|^10$ ]]; then
+    echo "${CFAILURE}input error! Please only input 1~10 and q${CEND}"
   else
     case "${Number}" in
       1)
@@ -234,55 +214,51 @@ What Are You Doing?
         done
         if [ "${ACTION}" = '1' ]; then
           Check_PHP_Extension
-          if [ -e ${php_install_dir}/etc/php.d/ext-ZendGuardLoader.ini ]; then
-            echo; echo "${CWARNING}You have to install ZendGuardLoader, You need to uninstall it before install ${PHP_extension}! ${CEND}"; echo; exit 1
-          else
-            case "${phpcache_option}" in
-              1)
-                pushd ${oneinstack_dir}/src > /dev/null
-                if [[ "${PHP_main_ver}" =~ ^5.[3-4]$ ]]; then
-                  src_url=https://pecl.php.net/get/zendopcache-${zendopcache_ver}.tgz && Download_src
-                  Install_ZendOPcache
-                else
-                  src_url=http://www.php.net/distributions/php-${PHP_detail_ver}.tar.gz && Download_src
-                  Install_ZendOPcache
-                fi
-                popd
+          case "${phpcache_option}" in
+            1)
+              pushd ${oneinstack_dir}/src > /dev/null
+              if [[ "${PHP_main_ver}" =~ ^5.[3-4]$ ]]; then
+                src_url=https://pecl.php.net/get/zendopcache-${zendopcache_ver}.tgz && Download_src
+                Install_ZendOPcache
+              else
+                src_url=http://www.php.net/distributions/php-${PHP_detail_ver}.tar.gz && Download_src
+                Install_ZendOPcache
+              fi
+              popd
+              Check_succ
+              ;;
+            2)
+              if [[ "${PHP_main_ver}" =~ ^5.[3-6]$ ]]; then
+                while :; do
+                  read -p "Please input xcache admin password: " xcachepwd
+                  (( ${#xcachepwd} >= 5 )) && { xcachepwd_md5=$(echo -n "${xcachepwd}" | md5sum | awk '{print $1}') ; break ; } || echo "${CFAILURE}xcache admin password least 5 characters! ${CEND}"
+                done
+                checkDownload
+                Install_XCache
                 Check_succ
-                ;;
-              2)
-                if [[ "${PHP_main_ver}" =~ ^5.[3-6]$ ]]; then
-                  while :; do
-                    read -p "Please input xcache admin password: " xcache_admin_pass
-                    (( ${#xcache_admin_pass} >= 5 )) && { xcache_admin_md5_pass=$(echo -n "${xcache_admin_pass}" | md5sum | awk '{print $1}') ; break ; } || echo "${CFAILURE}xcache admin password least 5 characters! ${CEND}"
-                  done
-                  checkDownload
-                  Install_XCache
-                  Check_succ
-                else
-                  echo "${CWARNING}Your php does not support XCache! ${CEND}"; exit 1
-                fi
-                ;;
-              3)
-                if [[ "${PHP_main_ver}" =~ ^5.[3-6]$|^7.[0-2]$ ]]; then
-                  checkDownload
-                  Install_APCU
-                  Check_succ
-                else
-                  echo "${CWARNING}Your php does not support APCU! ${CEND}"; exit 1
-                fi
-                ;;
-              4)
-                if [[ "${PHP_main_ver}" =~ ^5.[3-4]$ ]]; then
-                  checkDownload
-                  Install_eAccelerator
-                  Check_succ
-                else
-                  echo "${CWARNING}Your php does not support eAccelerator! ${CEND}"; exit 1
-                fi
-                ;;
-            esac
-          fi
+              else
+                echo "${CWARNING}Your php does not support XCache! ${CEND}"; exit 1
+              fi
+              ;;
+            3)
+              if [[ "${PHP_main_ver}" =~ ^5.[3-6]$|^7.[0-2]$ ]]; then
+                checkDownload
+                Install_APCU
+                Check_succ
+              else
+                echo "${CWARNING}Your php does not support APCU! ${CEND}"; exit 1
+              fi
+              ;;
+            4)
+              if [[ "${PHP_main_ver}" =~ ^5.[3-4]$ ]]; then
+                checkDownload
+                Install_eAccelerator
+                Check_succ
+              else
+                echo "${CWARNING}Your php does not support eAccelerator! ${CEND}"; exit 1
+              fi
+              ;;
+          esac
         else
           Uninstall_succ
         fi
@@ -299,21 +275,17 @@ What Are You Doing?
             echo "${CWARNING}input error! Please only input number 1~2${CEND}"
           else
             [ "${Loader}" = '1' ] && PHP_extension=ZendGuardLoader
-            [ "${Loader}" = '2' ] && PHP_extension=0ioncube
+            [ "${Loader}" = '2' ] && PHP_extension=ioncube
             break
           fi
         done
         if [ "${ACTION}" = '1' ]; then
           Check_PHP_Extension
           if [ "${Loader}" = '1' ]; then
-            if [[ "${PHP_main_ver}" =~ ^5.[3-6]$ ]] || [ "${armplatform}" != 'y' ]; then
-              if [ -e ${php_install_dir}/etc/php.d/ext-opcache.ini ]; then
-                echo; echo "${CWARNING}You have to install OpCache, You need to uninstall it before install ZendGuardLoader! ${CEND}"; echo; exit 1
-              else
-                zendguardloader_yn='y' && checkDownload
-                Install_ZendGuardLoader
-                Check_succ
-              fi
+            if [[ "${PHP_main_ver}" =~ ^5.[3-6]$ ]] && [ "${armplatform}" != 'y' ]; then
+              zendguardloader_yn='y' && checkDownload
+              Install_ZendGuardLoader
+              Check_succ
             else
               echo; echo "${CWARNING}Your php ${PHP_detail_ver} or platform ${TARGET_ARCH} does not support ${PHP_extension}! ${CEND}";
             fi
@@ -350,18 +322,18 @@ What Are You Doing?
           Check_PHP_Extension
           magick_yn=y && checkDownload
           if [ "${magick_option}" = '1' ]; then
-            [ ! -d "/usr/local/imagemagick" ] && Install_ImageMagick
+            [ ! -d "${imagick_install_dir}" ] && Install_ImageMagick
             Install_php-imagick
             Check_succ
           elif [ "${magick_option}" = '2' ]; then
-            [ ! -d "/usr/local/graphicsmagick" ] && Install_GraphicsMagick
+            [ ! -d "${gmagick_install_dir}" ] && Install_GraphicsMagick
             Install_php-gmagick
             Check_succ
           fi
         else
           Uninstall_succ
-          [ -d "/usr/local/imagemagick" ] && rm -rf /usr/local/imagemagick
-          [ -d "/usr/local/graphicsmagick" ] && rm -rf /usr/local/graphicsmagick
+          [ -d "${imagick_install_dir}" ] && rm -rf ${imagick_install_dir}
+          [ -d "${gmagick_install_dir}" ] && rm -rf ${gmagick_install_dir}
         fi
         ;;
       4)
@@ -378,7 +350,7 @@ What Are You Doing?
           make -j ${THREAD} && make install
           popd;popd
           rm -rf php-${PHP_detail_ver}
-          echo "extension=fileinfo.so" > ${php_install_dir}/etc/php.d/ext-fileinfo.ini
+          echo "extension=fileinfo.so" > ${php_install_dir}/etc/php.d/04-fileinfo.ini
           Check_succ
         else
           Uninstall_succ
@@ -446,14 +418,6 @@ What Are You Doing?
         ;;
       7)
         ACTION_FUN
-        if [ "${ACTION}" = '1' ]; then
-          Install_letsencrypt
-        else
-          Uninstall_letsencrypt
-        fi
-        ;;
-      8)
-        ACTION_FUN
         PHP_extension=swoole
         if [ "${ACTION}" = '1' ]; then
           Check_PHP_Extension
@@ -463,23 +427,23 @@ What Are You Doing?
             tar xzf swoole-${swoole_ver}.tgz
             pushd swoole-${swoole_ver}
           else
-            src_url=https://pecl.php.net/get/swoole-1.10.1.tgz && Download_src
-            tar xzf swoole-1.10.1.tgz
-            pushd swoole-1.10.1
+            src_url=https://pecl.php.net/get/swoole-1.10.4.tgz && Download_src
+            tar xzf swoole-1.10.4.tgz
+            pushd swoole-1.10.4
           fi
           ${php_install_dir}/bin/phpize
           ./configure --with-php-config=${php_install_dir}/bin/php-config
           make -j ${THREAD} && make install
           popd
-          rm -rf swoole-${swoole_ver} 
+          rm -rf swoole-${swoole_ver}
           popd
-          echo 'extension=swoole.so' > ${php_install_dir}/etc/php.d/ext-swoole.ini
+          echo 'extension=swoole.so' > ${php_install_dir}/etc/php.d/06-swoole.ini
           Check_succ
         else
           Uninstall_succ
         fi
         ;;
-      9)
+      8)
         ACTION_FUN
         PHP_extension=xdebug
         if [ "${ACTION}" = '1' ]; then
@@ -488,17 +452,17 @@ What Are You Doing?
           if [[ "${PHP_main_ver}" =~ ^7\.[0-2]$ ]]; then
             src_url=https://pecl.php.net/get/xdebug-${xdebug_ver}.tgz && Download_src
             src_url=http://mirrors.linuxeye.com/oneinstack/src/webgrind-master.zip && Download_src
-            tar xzf xdebug-${xdebug_ver}.tgz 
+            tar xzf xdebug-${xdebug_ver}.tgz
             unzip -q webgrind-master.zip
-            /bin/mv webgrind-master ${wwwroot_dir}/default/webgrind 
-            pushd xdebug-${xdebug_ver} 
+            /bin/mv webgrind-master ${wwwroot_dir}/default/webgrind
+            pushd xdebug-${xdebug_ver}
           elif [[ "${PHP_main_ver}" =~ ^5\.[5-6]$ ]]; then
             src_url=https://pecl.php.net/get/xdebug-2.5.5.tgz && Download_src
             src_url=http://mirrors.linuxeye.com/oneinstack/src/webgrind-master.zip && Download_src
-            tar xzf xdebug-2.5.5.tgz 
+            tar xzf xdebug-2.5.5.tgz
             unzip -q webgrind-master.zip
-            /bin/mv webgrind-master ${wwwroot_dir}/default/webgrind 
-            pushd xdebug-2.5.5 
+            /bin/mv webgrind-master ${wwwroot_dir}/default/webgrind
+            pushd xdebug-2.5.5
           else
             echo "${CWARNING}Need a PHP version >= 5.5.0 and <= 7.2.0${CEND}"
             exit 1
@@ -507,14 +471,14 @@ What Are You Doing?
           ./configure --with-php-config=${php_install_dir}/bin/php-config
           make -j ${THREAD} && make install
           popd
-          rm -rf xdebug-${xdebug_ver} 
+          rm -rf xdebug-${xdebug_ver}
           popd
           [ ! -e /tmp/xdebug ] && { mkdir /tmp/xdebug; chown ${run_user}.${run_user} /tmp/xdebug; }
           [ ! -e /tmp/webgrind ] && { mkdir /tmp/webgrind; chown ${run_user}.${run_user} /tmp/webgrind; }
           chown -R ${run_user}.${run_user} ${wwwroot_dir}/default/webgrind
           sed -i 's@static $storageDir.*@static $storageDir = "/tmp/webgrind";@' ${wwwroot_dir}/default/webgrind/config.php
           sed -i 's@static $profilerDir.*@static $profilerDir = "/tmp/xdebug";@' ${wwwroot_dir}/default/webgrind/config.php
-          cat > ${php_install_dir}/etc/php.d/ext-xdebug.ini << EOF
+          cat > ${php_install_dir}/etc/php.d/08-xdebug.ini << EOF
 [xdebug]
 zend_extension=xdebug.so
 xdebug.trace_output_dir=/tmp/xdebug
@@ -529,7 +493,7 @@ EOF
           Uninstall_succ
         fi
         ;;
-      10)
+      9)
         ACTION_FUN
         if [ "${ACTION}" = '1' ]; then
           [ -e "/usr/local/bin/composer" ] && { echo "${CWARNING}PHP Composer already installed! ${CEND}"; exit 1; }
@@ -550,7 +514,7 @@ EOF
           echo; echo "${CMSG}composer uninstall completed${CEND}";
         fi
         ;;
-      11)
+      10)
         ACTION_FUN
         if [ "${ACTION}" = '1' ]; then
           Install_fail2ban
@@ -559,8 +523,8 @@ EOF
         fi
         ;;
       q)
-      exit
-      ;;
+        exit
+        ;;
     esac
   fi
 done

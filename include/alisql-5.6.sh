@@ -16,7 +16,7 @@ Install_AliSQL56() {
   [ ! -d "${alisql_install_dir}" ] && mkdir -p ${alisql_install_dir}
   mkdir -p ${alisql_data_dir};chown mysql.mysql -R ${alisql_data_dir}
 
-  tar xvf alisql-${alisql_ver}.tar.gz
+  tar xzf alisql-${alisql_ver}.tar.gz
   pushd alisql-${alisql_ver}
   cmake . -DCMAKE_INSTALL_PREFIX=${alisql_install_dir} \
   -DCMAKE_BUILD_TYPE="Release" \
@@ -37,6 +37,7 @@ Install_AliSQL56() {
 
   if [ -d "${alisql_install_dir}/support-files" ]; then
     echo never > /sys/kernel/mm/transparent_hugepage/enabled
+    sed -i "s+^dbrootpwd.*+dbrootpwd='${dbrootpwd}'+" ../options.conf
     echo "${CSUCCESS}AliSQL installed successfully! ${CEND}"
     rm -rf alisql-${alisql_ver}
   else
@@ -46,7 +47,7 @@ Install_AliSQL56() {
     kill -9 $$
   fi
   /bin/cp ${alisql_install_dir}/support-files/mysql.server /etc/init.d/mysqld
-  [ -z "`grep transparent_hugepage /etc/init.d/mysqld`" ] && sed -i "s@^basedir=.*@echo never > /sys/kernel/mm/transparent_hugepage/enabled\n&@" /etc/init.d/mysqld 
+  [ -z "`grep transparent_hugepage /etc/init.d/mysqld`" ] && sed -i "s@^basedir=.*@echo never > /sys/kernel/mm/transparent_hugepage/enabled\n&@" /etc/init.d/mysqld
   sed -i "s@^basedir=.*@basedir=${alisql_install_dir}@" /etc/init.d/mysqld
   sed -i "s@^datadir=.*@datadir=${alisql_data_dir}@" /etc/init.d/mysqld
   chmod +x /etc/init.d/mysqld

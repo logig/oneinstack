@@ -18,12 +18,12 @@ Install_Percona56() {
 
   if [ "${dbinstallmethod}" == "1" ]; then
     perconaVerStr1=$(echo ${percona56_ver} | sed "s@-@-rel@")
-    tar xvf Percona-Server-${perconaVerStr1}-Linux.${SYS_BIT_b}.${sslLibVer}.tar.gz
+    tar xzf Percona-Server-${perconaVerStr1}-Linux.${SYS_BIT_b}.${sslLibVer}.tar.gz
     mv Percona-Server-${perconaVerStr1}-Linux.${SYS_BIT_b}.${sslLibVer}/* ${percona_install_dir}
     sed -i 's@executing mysqld_safe@executing mysqld_safe\nexport LD_PRELOAD=/usr/local/lib/libjemalloc.so@' ${percona_install_dir}/bin/mysqld_safe
-    sed -i "s@/usr/local/Percona-Server-${perconaVerStr1}-Linux.${SYS_BIT_b}.${sslLibVer}@${percona_install_dir}@g" ${percona_install_dir}/bin/mysqld_safe 
+    sed -i "s@/usr/local/Percona-Server-${perconaVerStr1}-Linux.${SYS_BIT_b}.${sslLibVer}@${percona_install_dir}@g" ${percona_install_dir}/bin/mysqld_safe
   elif [ "${dbinstallmethod}" == "2" ]; then
-    tar xvf percona-server-${percona56_ver}.tar.gz
+    tar xzf percona-server-${percona56_ver}.tar.gz
     pushd percona-server-${percona56_ver}
     cmake . -DCMAKE_INSTALL_PREFIX=${percona_install_dir} \
     -DMYSQL_DATADIR=${percona_data_dir} \
@@ -47,6 +47,7 @@ Install_Percona56() {
   fi
 
   if [ -d "${percona_install_dir}/support-files" ]; then
+    sed -i "s+^dbrootpwd.*+dbrootpwd='${dbrootpwd}'+" ../options.conf
     echo "${CSUCCESS}Percona installed successfully! ${CEND}"
     if [ "${dbinstallmethod}" == "1" ]; then
       rm -rf Percona-Server-${perconaVerStr1}-Linux.${SYS_BIT_b}.${sslLibVer}
@@ -55,7 +56,6 @@ Install_Percona56() {
     fi
   else
     rm -rf ${percona_install_dir}
-    rm -rf percona-server-${percona56_ver}
     echo "${CFAILURE}Percona install failed, Please contact the author! ${CEND}"
     kill -9 $$
   fi

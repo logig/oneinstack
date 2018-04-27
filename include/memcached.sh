@@ -31,6 +31,7 @@ Install_memcached() {
     let memcachedCache="${Mem}/8"
     [ -n "$(grep 'CACHESIZE=' /etc/init.d/memcached)" ] && sed -i "s@^CACHESIZE=.*@CACHESIZE=${memcachedCache}@" /etc/init.d/memcached
     [ -n "$(grep 'start_instance default 256;' /etc/init.d/memcached)" ] && sed -i "s@start_instance default 256;@start_instance default ${memcachedCache};@" /etc/init.d/memcached
+    [ -e /usr/bin/systemctl ] && systemctl daemon-reload
     service memcached start
     rm -rf memcached-${memcached_ver}
   else
@@ -60,7 +61,7 @@ Install_php-memcache() {
     make -j ${THREAD} && make install
     popd
     if [ -f "${phpExtensionDir}/memcache.so" ]; then
-      echo "extension=memcache.so" > ${php_install_dir}/etc/php.d/ext-memcache.ini
+      echo "extension=memcache.so" > ${php_install_dir}/etc/php.d/05-memcache.ini
       echo "${CSUCCESS}PHP memcache module installed successfully! ${CEND}"
       rm -rf pecl-memcache-php7 memcache-${memcache_pecl_ver}
     else
@@ -85,8 +86,8 @@ Install_php-memcached() {
     rm -rf libmemcached-${libmemcached_ver}
 
     if [ "$(${php_install_dir}/bin/php -r 'echo PHP_VERSION;' | awk -F. '{print $1}')" == '7' ]; then
-      tar xzf memcached-${memcached_pecl_php7_ver}.tgz 
-      pushd memcached-${memcached_pecl_php7_ver} 
+      tar xzf memcached-${memcached_pecl_php7_ver}.tgz
+      pushd memcached-${memcached_pecl_php7_ver}
     else
       tar xzf memcached-${memcached_pecl_ver}.tgz
       pushd memcached-${memcached_pecl_ver}
@@ -96,7 +97,7 @@ Install_php-memcached() {
     make -j ${THREAD} && make install
     popd
     if [ -f "${phpExtensionDir}/memcached.so" ]; then
-      cat > ${php_install_dir}/etc/php.d/ext-memcached.ini << EOF
+      cat > ${php_install_dir}/etc/php.d/05-memcached.ini << EOF
 extension=memcached.so
 memcached.use_sasl=1
 EOF

@@ -11,7 +11,7 @@
 Install_PostgreSQL() {
   pushd ${oneinstack_dir}/src > /dev/null
   id -u postgres >/dev/null 2>&1
-  [ $? -ne 0 ] && useradd -d ${pgsql_install_dir} -s /bin/bash postgres 
+  [ $? -ne 0 ] && useradd -d ${pgsql_install_dir} -s /bin/bash postgres
   mkdir -p ${pgsql_data_dir};chown postgres.postgres -R ${pgsql_data_dir}
   tar xzf postgresql-${pgsql_ver}.tar.gz
   pushd postgresql-${pgsql_ver}
@@ -38,10 +38,11 @@ Install_PostgreSQL() {
   service postgresql reload
 
   if [ -e "${pgsql_install_dir}/bin/psql" ]; then
+    sed -i "s+^dbpostgrespwd.*+dbpostgrespwd='$dbpostgrespwd'+" ../options.conf
     echo "${CSUCCESS}PostgreSQL installed successfully! ${CEND}"
     rm -rf postgresql-${pgsql_ver}
   else
-    rm -rf ${pgsql_install_dir} ${pgsql_data_dir} postgresql-${pgsql_ver}
+    rm -rf ${pgsql_install_dir} ${pgsql_data_dir}
     echo "${CFAILURE}PostgreSQL install failed, Please contact the author! ${CEND}"
     kill -9 $$
   fi
